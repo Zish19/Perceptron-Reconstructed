@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "perceptron-reconstructed"
+version = "0.1.0"
+description = "A reproducible, paper-inspired simulator for Frank Rosenblatt's 1958 perceptron." 
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Perceptron Reconstructed contributors"}]
+dependencies = [
+  "numpy>=1.24",
+  "scikit-learn",
+  "fastapi",
+  "uvicorn",
+  "pandas"
+]
+
+[tool.setuptools.packages.find]
+where = ["backend"]
