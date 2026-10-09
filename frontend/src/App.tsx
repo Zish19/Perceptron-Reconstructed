@@ -102,7 +102,6 @@ function App() {
       }
     };
     
-    // Add a slight debounce so we don't spam the server while sliding
     const timer = setTimeout(() => {
       runExperiment();
     }, 300);
@@ -281,7 +280,7 @@ function App() {
             </div>
 
             <div className="info-box">
-              <strong><span style={{marginRight: '0.5rem'}}>🛈</span> Network Weights</strong>
+              <strong>Network Weights</strong>
               <p style={{margin: '0.5rem 0 0 0'}}>Weights determine the strength of connections between neurons. During training, these weights are adjusted to minimize error.</p>
             </div>
 
@@ -305,7 +304,7 @@ function App() {
                   </ul>
 
                   <div className="info-box" style={{marginTop: '1.5rem', background: '#f8fafc', borderLeft: '4px solid #3b82f6'}}>
-                    <strong><span style={{marginRight: '0.5rem'}}>🧮</span> How is Accuracy Calculated?</strong>
+                    <strong>How is Accuracy Calculated?</strong>
                     <p style={{margin: '0.5rem 0 0 0', fontSize: '0.9rem'}}>
                       In the classic 1958 Perceptron, the network output is determined by the R-unit (Response unit) that receives the highest sum of signals from active A-units. During training, weights between A-units and R-units are updated using the <b>Bivalent Gamma</b> rule, which strictly penalizes the network for errors. 
                       <br /><br />

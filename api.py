@@ -36,7 +36,6 @@ class ExperimentRequest(BaseModel):
 
 @app.post("/api/run")
 def run_lab_experiment(req: ExperimentRequest):
-    # Ensure association origins don't exceed the n_projection layer size
     assoc_exc = min(16, max(1, int(req.n_projection * 0.8)))
     assoc_inh = min(4, max(0, req.n_projection - assoc_exc))
 
@@ -65,7 +64,6 @@ def run_lab_experiment(req: ExperimentRequest):
         seed=req.seed,
     )
     
-    # Calculate P_a and P_e
     probs = result.model.calculate_probabilities(result.X_test)
     
     return {
@@ -94,20 +92,15 @@ async def run_lab_experiment_upload(
         X_df = df.drop(columns=[y_col])
         y_series = df[y_col]
         
-        # One-hot encode categorical features
         X_df = pd.get_dummies(X_df, drop_first=True)
         X_df = X_df.fillna(0)
         
-        # Binarize features using mean thresholding to fit 1958 S-units (which only accept 0 or 1)
         X_mat = X_df.astype(float).values
         means = np.mean(X_mat, axis=0)
         X_bin = (X_mat > means).astype(np.uint8)
         
-        # Label encode targets to exactly 0 and 1
         y_mat = pd.factorize(y_series)[0].astype(np.int64)
         
-        # The 1958 perceptron expects a retina of size R x R (perfect square)
-        # We must pad our features with zeros until they form a perfect square
         num_features = X_bin.shape[1]
         retina_size = math.ceil(math.sqrt(num_features))
         required_features = retina_size ** 2
@@ -116,7 +109,6 @@ async def run_lab_experiment_upload(
             padding = np.zeros((X_bin.shape[0], required_features - num_features), dtype=np.uint8)
             X_bin = np.hstack((X_bin, padding))
             
-        # Ensure projection units are reasonable relative to retina
         actual_n_projection = max(n_projection, 3)
         assoc_exc = min(16, max(1, int(actual_n_projection * 0.8)))
         assoc_inh = min(4, max(0, actual_n_projection - assoc_exc))
@@ -130,7 +122,7 @@ async def run_lab_experiment_upload(
             association_threshold=1,
             association_excitatory_origins=assoc_exc,
             association_inhibitory_origins=assoc_inh,
-            projection_locality="random",  # Use random projection since this isn't a real 2D image
+            projection_locality="random",
             learning_rule="bivalent_gamma",
             disjoint_response_sources=True,
             learning_rate=learning_rate,
