@@ -75,3 +75,40 @@ def run_experiment(
         y_test=test.y,
         seed=seed,
     )
+
+def run_experiment_custom(
+    X: NDArray[np.uint8],
+    y: NDArray[np.int64],
+    config: PerceptronConfig,
+    epochs: int = 20,
+) -> ExperimentResult:
+    # Simple train-test split (80-20)
+    indices = np.random.permutation(len(X))
+    split = int(0.8 * len(X))
+    train_idx, test_idx = indices[:split], indices[split:]
+    
+    X_train, y_train = X[train_idx], y[train_idx]
+    X_test, y_test = X[test_idx], y[test_idx]
+    
+    model = RosenblattPerceptron(config)
+    initial_pred = model.predict(X_test)
+    initial_accuracy = accuracy_score(y_test, initial_pred)
+    
+    history = model.fit(X_train, y_train, epochs=epochs)
+    
+    train_pred = model.predict(X_train)
+    test_pred = model.predict(X_test)
+    
+    return ExperimentResult(
+        model=model,
+        history=history,
+        initial_test_accuracy=initial_accuracy,
+        final_train_accuracy=accuracy_score(y_train, train_pred),
+        final_test_accuracy=accuracy_score(y_test, test_pred),
+        test_confusion=confusion_matrix(y_test, test_pred, n_classes=2),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+        seed=config.seed,
+    )

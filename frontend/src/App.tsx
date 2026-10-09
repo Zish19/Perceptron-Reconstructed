@@ -37,6 +37,7 @@ interface Result {
 function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [config, setConfig] = useState<Config>({
     seed: 7,
     epochs: 20,
@@ -74,8 +75,26 @@ function App() {
     const runExperiment = async () => {
       setLoading(true);
       try {
-        const res = await axios.post('http://localhost:8000/api/run', config);
-        setResult(res.data);
+        let res;
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('n_projection', config.n_projection.toString());
+          formData.append('n_association', config.n_association.toString());
+          formData.append('n_responses', config.n_responses.toString());
+          formData.append('threshold', config.threshold.toString());
+          formData.append('epochs', config.epochs.toString());
+          formData.append('learning_rate', config.learning_rate.toString());
+          res = await axios.post('http://localhost:8000/api/run-upload', formData);
+        } else {
+          res = await axios.post('http://localhost:8000/api/run', config);
+        }
+        
+        if (res.data.error) {
+          console.error(res.data.error);
+        } else {
+          setResult(res.data);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -89,7 +108,7 @@ function App() {
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [config]);
+  }, [config, file]);
 
   return (
     <div className="layout">
@@ -174,6 +193,19 @@ function App() {
             
             <div className="sim-card" style={{background: '#fafafa', marginTop: '1rem'}}>
               <h3>Network Configuration</h3>
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#e2e8f0', borderRadius: '4px' }}>
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>Upload Custom Dataset (CSV)</label>
+                <input 
+                  type="file" 
+                  accept=".csv"
+                  onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                  style={{ display: 'block' }}
+                />
+                <small style={{ color: '#64748b', display: 'block', marginTop: '0.5rem' }}>
+                  If uploaded, the 1958 Classic Network will binarize your features (using mean thresholding) to simulate sensory input!
+                </small>
+              </div>
+
               <div className="sim-controls">
                 <div className="slider-group">
                   <label>Input Neurons: {config.n_projection}</label>
@@ -271,6 +303,15 @@ function App() {
                     <li><b>Probability A-Unit Active (<i>P<sub>a</sub></i>):</b> {result.probabilities.P_a_mean.toFixed(4)} (&plusmn;{result.probabilities.P_a_std.toFixed(4)})</li>
                     <li><b>Expected Active Proportion (<i>P<sub>e</sub></i>):</b> {result.probabilities.P_e_mean.toFixed(4)} (&plusmn;{result.probabilities.P_e_std.toFixed(4)})</li>
                   </ul>
+
+                  <div className="info-box" style={{marginTop: '1.5rem', background: '#f8fafc', borderLeft: '4px solid #3b82f6'}}>
+                    <strong><span style={{marginRight: '0.5rem'}}>🧮</span> How is Accuracy Calculated?</strong>
+                    <p style={{margin: '0.5rem 0 0 0', fontSize: '0.9rem'}}>
+                      In the classic 1958 Perceptron, the network output is determined by the R-unit (Response unit) that receives the highest sum of signals from active A-units. During training, weights between A-units and R-units are updated using the <b>Bivalent Gamma</b> rule, which strictly penalizes the network for errors. 
+                      <br /><br />
+                      The <b>Test Accuracy</b> displayed above is simply the percentage of test stimuli where the <i>correct</i> R-unit successfully produced the highest activation sum!
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <p><i>Initializing backend model...</i></p>
