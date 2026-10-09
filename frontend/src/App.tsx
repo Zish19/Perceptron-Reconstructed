@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import './index.css';
 
 interface Config {
@@ -19,25 +18,7 @@ interface Config {
   disjoint: boolean;
 }
 
-interface Probabilities {
-  P_a_mean: number;
-  P_a_std: number;
-  P_e_mean: number;
-  P_e_std: number;
-}
-
-interface Result {
-  initial_test_accuracy: number;
-  final_train_accuracy: number;
-  final_test_accuracy: number;
-  test_confusion: number[][];
-  probabilities: Probabilities;
-}
-
 function App() {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
-
   const [config, setConfig] = useState<Config>({
     seed: 7,
     epochs: 20,
@@ -69,19 +50,6 @@ function App() {
       ...prev,
       [name]: finalValue
     }));
-  };
-
-  const runExperiment = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.post('http://localhost:8000/api/run', config);
-      setResult(res.data);
-    } catch (err) {
-      console.error(err);
-      alert('Simulation error. Ensure API runs on port 8000.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -248,27 +216,6 @@ function App() {
             </div>
           </div>
 
-          <div>
-            {result && !loading ? (
-              <div>
-                <p>The simulation yielded the following metrics over <b>{config.epochs} epochs</b>:</p>
-                <div className="metrics-grid">
-                  <div className="metric-card">
-                    <h4>Test Accuracy</h4>
-                    <p style={{fontSize: '2rem', margin: 0}}>{(result.final_test_accuracy * 100).toFixed(1)}%</p>
-                  </div>
-                </div>
-
-                <h3>Probability Models</h3>
-                <ul>
-                  <li><b>Probability A-Unit Active (<i>P<sub>a</sub></i>):</b> {result.probabilities.P_a_mean.toFixed(4)} (&plusmn;{result.probabilities.P_a_std.toFixed(4)})</li>
-                  <li><b>Expected Active Proportion (<i>P<sub>e</sub></i>):</b> {result.probabilities.P_e_mean.toFixed(4)} (&plusmn;{result.probabilities.P_e_std.toFixed(4)})</li>
-                </ul>
-              </div>
-            ) : (
-              <p><i>Execute the simulation from the infobox to generate empirical results.</i></p>
-            )}
-                  <div style={{ clear: 'both' }}></div>
         </div>
       </main>
     </div>
