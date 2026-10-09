@@ -1,17 +1,8 @@
-from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.middleware.cors import CORSMiddleware
-import pandas as pd
-import io
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from rosenblatt_lab.experiments import run_experiment
 from rosenblatt_lab.model import PerceptronConfig
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "ML-Perceptron-Experiment"))
-from ML_Perceptron_Implementation import run_ml_pipeline
-
 app = FastAPI(title="Perceptron Reconstructed API")
 
 app.add_middleware(
@@ -75,70 +66,4 @@ def run_lab_experiment(req: ExperimentRequest):
         "probabilities": probs
     }
 
-class MLRequest(BaseModel):
-    seed: int = 42
-    samples: int = 1000
-    features: int = 20
-    select_k: int = 5
-    noise_level: float = 0.01
-    use_pca: bool = False
-    pca_components: int = 3
-    use_rbf: bool = False
-    rbf_components: int = 50
-    model_type: str = "perceptron"
 
-@app.post("/api/run-ml")
-def run_ml_experiment(req: MLRequest):
-    config = req.dict()
-    metrics = run_ml_pipeline(config)
-    return metrics
-
-@app.post("/api/run-ml-upload")
-async def run_ml_experiment_upload(
-    file: UploadFile = File(...),
-    seed: int = Form(42),
-    select_k: int = Form(5),
-    noise_level: float = Form(0.01),
-    use_pca: bool = Form(False),
-    pca_components: int = Form(3),
-    use_rbf: bool = Form(False),
-    rbf_components: int = Form(50),
-    model_type: str = Form("perceptron")
-):
-    # Parse CSV file
-    content = await file.read()
-    try:
-        df = pd.read_csv(io.StringIO(content.decode('utf-8')))
-        
-        # Assume last column is target, remaining are features
-        y_col = df.columns[-1]
-        X_df = df.drop(columns=[y_col])
-        y_series = df[y_col]
-        
-        # Convert categorical features using one-hot encoding
-        X_df = pd.get_dummies(X_df, drop_first=True)
-        # Fill missing values if any
-        X_df = X_df.fillna(0)
-        
-        X_ext = X_df.astype(float).values
-        
-        # Label encode target
-        from sklearn.preprocessing import LabelEncoder
-        le = LabelEncoder()
-        y_ext = le.fit_transform(y_series)
-        
-        config = {
-            "seed": seed,
-            "select_k": select_k,
-            "noise_level": noise_level,
-            "use_pca": use_pca,
-            "pca_components": pca_components,
-            "use_rbf": use_rbf,
-            "rbf_components": rbf_components,
-            "model_type": model_type
-        }
-        
-        metrics = run_ml_pipeline(config, X_ext=X_ext, y_ext=y_ext)
-        return metrics
-    except Exception as e:
-        return {"error": str(e)}
