@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import './index.css';
 
 interface Config {
@@ -18,7 +19,24 @@ interface Config {
   disjoint: boolean;
 }
 
+interface Probabilities {
+  P_a_mean: number;
+  P_a_std: number;
+  P_e_mean: number;
+  P_e_std: number;
+}
+
+interface Result {
+  initial_test_accuracy: number;
+  final_train_accuracy: number;
+  final_test_accuracy: number;
+  test_confusion: number[][];
+  probabilities: Probabilities;
+}
+
 function App() {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
   const [config, setConfig] = useState<Config>({
     seed: 7,
     epochs: 20,
@@ -51,6 +69,27 @@ function App() {
       [name]: finalValue
     }));
   };
+
+  useEffect(() => {
+    const runExperiment = async () => {
+      setLoading(true);
+      try {
+        const res = await axios.post('http://localhost:8000/api/run', config);
+        setResult(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Add a slight debounce so we don't spam the server while sliding
+    const timer = setTimeout(() => {
+      runExperiment();
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [config]);
 
   return (
     <div className="layout">
@@ -212,8 +251,32 @@ function App() {
             <div className="info-box">
               <strong><span style={{marginRight: '0.5rem'}}>🛈</span> Network Weights</strong>
               <p style={{margin: '0.5rem 0 0 0'}}>Weights determine the strength of connections between neurons. During training, these weights are adjusted to minimize error.</p>
-              <p style={{margin: '0.5rem 0 0 0', fontSize: '0.9rem'}}>Click on connections to see weight values</p>
             </div>
+
+            <div style={{marginTop: '2rem'}}>
+              {result ? (
+                <div>
+                  <h3 style={{ borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>Dynamic 1958 Simulation Results</h3>
+                  {loading && <p style={{color: '#888'}}><i>Calculating state space expansion...</i></p>}
+                  
+                  <div className="metrics-grid" style={{ opacity: loading ? 0.5 : 1 }}>
+                    <div className="metric-card">
+                      <h4>Test Accuracy</h4>
+                      <p style={{fontSize: '2.5rem', margin: '0.5rem 0 0 0'}}>{(result.final_test_accuracy * 100).toFixed(1)}%</p>
+                    </div>
+                  </div>
+
+                  <h4>Probabilistic Measurements</h4>
+                  <ul>
+                    <li><b>Probability A-Unit Active (<i>P<sub>a</sub></i>):</b> {result.probabilities.P_a_mean.toFixed(4)} (&plusmn;{result.probabilities.P_a_std.toFixed(4)})</li>
+                    <li><b>Expected Active Proportion (<i>P<sub>e</sub></i>):</b> {result.probabilities.P_e_mean.toFixed(4)} (&plusmn;{result.probabilities.P_e_std.toFixed(4)})</li>
+                  </ul>
+                </div>
+              ) : (
+                <p><i>Initializing backend model...</i></p>
+              )}
+            </div>
+
           </div>
 
         </div>
